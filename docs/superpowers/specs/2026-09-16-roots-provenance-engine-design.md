@@ -1,7 +1,7 @@
 # Roots Provenance Engine — Design Specification
 
 Date: 2026-09-16
-Status: Design candidate for first implementation
+Status: Design candidate for first implementation; self-reviewed 2026-09-16
 Repository: `thebrazenbeard/roots`
 
 ## 1. Purpose
@@ -386,13 +386,12 @@ class SourceAdapter(Protocol):
     def normalize(self, candidate: RawCandidate) -> EvidenceEvent: ...
 ```
 
-Initial adapters:
+Version `0.1` adapters:
 
 1. filesystem Markdown/text;
-2. JSON/JSONL conversation/event records;
-3. Git commit/history metadata where locally available.
+2. JSON/JSONL conversation or event records.
 
-Later adapters may include connector APIs, databases, and vector indexes.
+Git history and connector/database adapters are explicitly deferred until the deterministic v0.1 chronology and receipt contracts are proven.
 
 ## 11. AI bootstrap behavior
 
@@ -579,6 +578,8 @@ schemas/
 docs/
   methodology.md
   terminology.md
+  bootstrap-contract.md
+  hostile-test-matrix.md
   superpowers/specs/
     2026-09-16-roots-provenance-engine-design.md
 tests/
