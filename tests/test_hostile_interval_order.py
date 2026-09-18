@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
-from roots.model import TemporalPrecision, TimeBounds
-from roots.time import TemporalRelation, compare_time_bounds
+from roots.model import EvidenceEvent, EpistemicStatus, RetrievalMethod, TemporalPrecision, TimeBounds
+from roots.time import TemporalRelation, compare_time_bounds, earliest_events
 
 
 UTC = timezone.utc
@@ -15,6 +15,18 @@ def bounds(start_day: int, end_day: int) -> TimeBounds:
     )
 
 
+def event(record_id: str, start_day: int, end_day: int) -> EvidenceEvent:
+    return EvidenceEvent(
+        record_id=record_id,
+        source_surface="fixture",
+        source_locator=f"fixture:{record_id}",
+        retrieval_method=RetrievalMethod.MANUAL,
+        epistemic_status=EpistemicStatus.DIRECT_SOURCE,
+        content=record_id,
+        event_time=bounds(start_day, end_day),
+    )
+
+
 def test_interval_order_preserves_known_nontransitive_relation():
     a = bounds(1, 3)
     b = bounds(2, 5)
@@ -24,3 +36,11 @@ def test_interval_order_preserves_known_nontransitive_relation():
     assert compare_time_bounds(b, c) is TemporalRelation.OVERLAPS_OR_INCOMPARABLE
     assert compare_time_bounds(a, c) is TemporalRelation.BEFORE
     assert compare_time_bounds(c, a) is TemporalRelation.AFTER
+
+
+def test_earliest_accessible_is_a_minimal_set_not_overlap_component():
+    a = event("a", 1, 3)
+    b = event("b", 2, 5)
+    c = event("c", 4, 6)
+
+    assert {item.record_id for item in earliest_events((a, b, c))} == {"a", "b"}
