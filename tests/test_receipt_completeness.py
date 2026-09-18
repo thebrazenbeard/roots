@@ -75,6 +75,23 @@ def _checks(receipt: ProvenanceReceipt) -> dict[str, bool]:
     return {check.code: check.passed for check in validate_receipt_claims(receipt)}
 
 
+def test_complete_receipt_requires_declared_source_scope():
+    target = TargetSpec(
+        target_id="t1",
+        kind=TargetKind.PHRASE,
+        query_original="target phrase",
+        literal_forms=("target phrase",),
+        source_surfaces=(),
+    )
+    receipt = _receipt(
+        target=target,
+        source_attempts=(SourceAttempt(source="chat", status="SEARCHED"),),
+    )
+    checks = _checks(receipt)
+    assert checks["complete.source_scope_declared"] is False
+    assert checks["complete.source_scope_covered"] is False
+
+
 def test_complete_receipt_requires_attempt_coverage_for_requested_sources():
     receipt = _receipt(
         source_attempts=(SourceAttempt(source="chat", status="SEARCHED"),)
