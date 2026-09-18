@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .model import CheckResult, Completeness, ProvenanceReceipt
+from .model import CheckResult, Completeness, OriginStatus, ProvenanceReceipt
 
 
 def _check(code: str, passed: bool, detail: str) -> CheckResult:
@@ -75,6 +75,12 @@ def validate_receipt_claims(receipt: ProvenanceReceipt) -> tuple[CheckResult, ..
             "complete.gaps_clear",
             not receipt.gaps,
             "unresolved lineage gaps require a partial/unresolved completeness claim",
+        ),
+        _check(
+            "complete.established_origin_conflict_free",
+            receipt.origin_status is not OriginStatus.ESTABLISHED
+            or not receipt.conflicts,
+            "origin_status ESTABLISHED cannot coexist with explicit unresolved conflicts",
         ),
         _check(
             "complete.verification_passed",

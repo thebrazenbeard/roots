@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from roots.model import (
     CheckResult,
     Completeness,
+    Conflict,
     EpistemicStatus,
     EvidenceEvent,
     Gap,
@@ -140,6 +141,36 @@ def test_complete_receipt_requires_executed_passing_verification_checks():
     )
     assert no_checks["complete.verification_passed"] is False
     assert failed["complete.verification_passed"] is False
+
+
+def test_established_origin_cannot_coexist_with_explicit_conflict():
+    receipt = _receipt(
+        origin_status=OriginStatus.ESTABLISHED,
+        conflicts=(
+            Conflict(
+                conflict_id="c1",
+                record_ids=("r1", "r2"),
+                description="competing origin evidence remains unresolved",
+            ),
+        ),
+    )
+    checks = _checks(receipt)
+    assert checks["complete.established_origin_conflict_free"] is False
+
+
+def test_unresolved_origin_may_preserve_conflict_without_strengthening_claim():
+    receipt = _receipt(
+        origin_status=OriginStatus.UNRESOLVED,
+        conflicts=(
+            Conflict(
+                conflict_id="c1",
+                record_ids=("r1", "r2"),
+                description="competing origin evidence remains unresolved",
+            ),
+        ),
+    )
+    checks = _checks(receipt)
+    assert checks["complete.established_origin_conflict_free"] is True
 
 
 def test_valid_complete_receipt_passes_claim_checks():
