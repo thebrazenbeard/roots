@@ -46,8 +46,14 @@ def validate_receipt_claims(receipt: ProvenanceReceipt) -> tuple[CheckResult, ..
             "complete receipt must disclose at least one source attempt",
         ),
         _check(
+            "complete.source_scope_declared",
+            bool(requested_sources),
+            "complete receipt must declare the source surfaces that define its scope",
+        ),
+        _check(
             "complete.source_scope_covered",
-            bool(attempted_sources) and requested_sources.issubset(attempted_sources),
+            bool(requested_sources)
+            and requested_sources.issubset(attempted_sources),
             "all explicitly requested source surfaces must appear in source attempts",
         ),
         _check(
