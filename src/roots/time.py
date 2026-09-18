@@ -37,8 +37,6 @@ def earliest_events(events: Iterable[EvidenceEvent]) -> tuple[EvidenceEvent, ...
     items = tuple(events)
     minima: list[EvidenceEvent] = []
     for candidate in items:
-        if candidate.event_time.start is None or candidate.event_time.end is None:
-            continue
         has_known_predecessor = any(
             other.record_id != candidate.record_id
             and compare_time_bounds(other.event_time, candidate.event_time)
