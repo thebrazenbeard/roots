@@ -3,11 +3,52 @@ from __future__ import annotations
 import calendar
 import re
 from datetime import datetime, time, timezone
+from enum import StrEnum
 from typing import Iterable
 
 from .model import EvidenceEvent, TemporalPrecision, TimeBounds
 
 UTC = timezone.utc
+
+
+class TemporalRelation(StrEnum):
+    BEFORE = "BEFORE"
+    AFTER = "AFTER"
+    OVERLAPS_OR_INCOMPARABLE = "OVERLAPS_OR_INCOMPARABLE"
+    UNKNOWN = "UNKNOWN"
+
+
+def compare_time_bounds(left: TimeBounds, right: TimeBounds) -> TemporalRelation:
+    if (
+        left.start is None
+        or left.end is None
+        or right.start is None
+        or right.end is None
+    ):
+        return TemporalRelation.UNKNOWN
+    if left.end < right.start:
+        return TemporalRelation.BEFORE
+    if right.end < left.start:
+        return TemporalRelation.AFTER
+    return TemporalRelation.OVERLAPS_OR_INCOMPARABLE
+
+
+def earliest_events(events: Iterable[EvidenceEvent]) -> tuple[EvidenceEvent, ...]:
+    items = tuple(events)
+    minima: list[EvidenceEvent] = []
+    for candidate in items:
+        if candidate.event_time.start is None or candidate.event_time.end is None:
+            continue
+        has_known_predecessor = any(
+            other.record_id != candidate.record_id
+            and compare_time_bounds(other.event_time, candidate.event_time)
+            is TemporalRelation.BEFORE
+            for other in items
+        )
+        if not has_known_predecessor:
+            minima.append(candidate)
+    return tuple(sorted(minima, key=chronology_key))
+
 
 
 def _aware(dt: datetime) -> datetime:
@@ -73,6 +114,10 @@ def chronology_key(event: EvidenceEvent) -> tuple[int, datetime, datetime, str]:
 
 
 def order_events(events: Iterable[EvidenceEvent]) -> tuple[tuple[EvidenceEvent, ...], ...]:
+    """Return display-oriented overlap groups, not a provenance total order.
+
+    Use compare_time_bounds/earliest_events for inferential chronology.
+    """
     known: list[EvidenceEvent] = []
     unknown: list[EvidenceEvent] = []
     for event in events:
