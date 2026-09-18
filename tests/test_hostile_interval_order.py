@@ -44,3 +44,22 @@ def test_earliest_accessible_is_a_minimal_set_not_overlap_component():
     c = event("c", 4, 6)
 
     assert {item.record_id for item in earliest_events((a, b, c))} == {"a", "b"}
+
+def test_earliest_set_preserves_unknown_time_as_incomparable_candidate():
+    a = event("a", 1, 3)
+    c = event("c", 4, 6)
+    unknown = EvidenceEvent(
+        record_id="unknown",
+        source_surface="fixture",
+        source_locator="fixture:unknown",
+        retrieval_method=RetrievalMethod.MANUAL,
+        epistemic_status=EpistemicStatus.DIRECT_SOURCE,
+        content="unknown",
+        event_time=TimeBounds(None, None, TemporalPrecision.UNKNOWN),
+    )
+
+    assert {item.record_id for item in earliest_events((a, c, unknown))} == {
+        "a",
+        "unknown",
+    }
+
