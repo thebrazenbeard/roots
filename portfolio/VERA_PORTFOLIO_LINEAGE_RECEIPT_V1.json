@@ -1,0 +1,161 @@
+{
+  "schema": "ROOTS_VERA_PORTFOLIO_LINEAGE_RECEIPT_V1",
+  "trace_id": "vera-portfolio-lineage-20260923-v1",
+  "observed_date": "2026-09-23",
+  "target": {
+    "kind": "CLAIM_SET",
+    "query_original": "Resolve Vera portfolio supersession, distinctness, provenance conflicts, and non-lineage overlap findings across the live 59-repository Discovery map."
+  },
+  "source_attempts": [
+    {
+      "source": "thebrazenbeard/discovery",
+      "status": "DIRECT_SOURCE",
+      "detail": "DISCOVERY_LIVE_PORTFOLIO_MAP_V2 at main@2881a94c7eb3c83a34b0c00bab739b41c1d99b6d, blob 71b9f8deaf1079d5078b19e5bbddb743fd636437"
+    },
+    {
+      "source": "thebrazenbeard/roots",
+      "status": "DIRECT_SOURCE",
+      "detail": "Current Roots provenance methodology on main@d62c58ed1385111170eafc1cda3fee0b68c9f05e"
+    }
+  ],
+  "completeness": "COMPLETE_RELATIVE_TO_CURRENT_DISCOVERY_MAP_AND_REFERENCED_DIRECT_SOURCES",
+  "origin_status": "MULTIPLE_CLAIMS",
+  "findings": [
+    {
+      "subject": "VERA_RELEASE",
+      "relation": "SUPERSESSION",
+      "epistemic_status": "DIRECT_SOURCE",
+      "confidence": "HIGH",
+      "from": "thebrazenbeard/vera-R9A0",
+      "to": "thebrazenbeard/vera-control-plane",
+      "conclusion": "ESTABLISHED_SUPERSESSION_OF_CONTROL_LINE",
+      "limitation": "This does not erase vera-R9A0 as historical/predecessor evidence."
+    },
+    {
+      "subject": "BUILD_TEAM_2_VS_BT2",
+      "relation": "DISTINCT_SUBJECTS",
+      "epistemic_status": "DIRECT_SOURCE",
+      "confidence": "HIGH",
+      "left": "thebrazenbeard/build-team-2.0",
+      "right": "thebrazenbeard/bt2",
+      "conclusion": "NO_SUPERSESSION_RELATION_ESTABLISHED",
+      "limitation": "Similar naming is not lineage evidence."
+    },
+    {
+      "subject": "HC_TEMPLATE_CANONICALITY",
+      "relation": "CONFLICT",
+      "epistemic_status": "DIRECT_SOURCE",
+      "confidence": "UNRESOLVED",
+      "claimants": [
+        "thebrazenbeard/self",
+        "thebrazenbeard/hc-brain",
+        "thebrazenbeard/bt2"
+      ],
+      "conclusion": "UNRESOLVED_MULTIPLE_CURRENT_CANONICALITY_CLAIMS",
+      "stop_condition": "Do not select a canonical template from naming, repository recency, or blob overlap alone."
+    },
+    {
+      "subject": "ORGASM_SOURCE",
+      "relation": "ROLE_SEPARATION",
+      "epistemic_status": "DIRECT_SOURCE",
+      "confidence": "HIGH",
+      "orientation_hub": "thebrazenbeard/orgasm",
+      "frozen_contract_source": "thebrazenbeard/sexuality",
+      "runtime_source": "thebrazenbeard/vera",
+      "conclusion": "ORIENTATION_DOES_NOT_SUPERSEDE_CONTRACT_OR_RUNTIME_SOURCE"
+    },
+    {
+      "subject": "VOSS_STATUS",
+      "relation": "CORRECTION",
+      "epistemic_status": "DIRECT_SOURCE",
+      "confidence": "HIGH",
+      "repository": "thebrazenbeard/voss",
+      "conclusion": "REPOSITORY_ACTIVE_REVIEW_ONLY_NOT_ARCHIVED",
+      "limitation": "Identity/runtime lifecycle may still differ from repository archive state."
+    },
+    {
+      "subject": "WORKBRIDGE_VERAMESH_BYTE_OVERLAP",
+      "relation": "REUSE",
+      "epistemic_status": "DIRECT_SOURCE",
+      "confidence": "HIGH",
+      "left": "thebrazenbeard/WorkBridgeMCP",
+      "right": "thebrazenbeard/vera-mesh",
+      "exact_shared_blob_count": 10,
+      "share_of_smaller_repo_bytes": 0.9419324765266032,
+      "shared_surface": ".github/workflows/*",
+      "conclusion": "GENERIC_WORKFLOW_TEMPLATE_REUSE_NO_ORIGIN_OR_SUCCESSION_ESTABLISHED"
+    },
+    {
+      "subject": "DRIFTGUARD_VERAMESH_BYTE_OVERLAP",
+      "relation": "REUSE",
+      "epistemic_status": "DIRECT_SOURCE",
+      "confidence": "HIGH",
+      "left": "thebrazenbeard/driftguard",
+      "right": "thebrazenbeard/vera-mesh",
+      "exact_shared_blob_count": 1,
+      "shared_surface": ".github/workflows/python-package-conda.yml",
+      "conclusion": "GENERIC_WORKFLOW_TEMPLATE_REUSE_NO_LINEAGE_ESTABLISHED"
+    },
+    {
+      "subject": "REDWORM_PROVIDER_AUTHORSHIP",
+      "relation": "ORIGIN_CLAIM",
+      "epistemic_status": "UNKNOWN",
+      "confidence": "UNRESOLVED",
+      "conclusion": "HISTORICAL_SOURCE_AUTHORSHIP_UNRESOLVED",
+      "stop_condition": "Do not infer an authoring repository from provider custody or schema name."
+    }
+  ],
+  "conflicts": [
+    {
+      "conflict_id": "HC_TEMPLATE_CANONICALITY_CONFLICT",
+      "record_ids": [
+        "thebrazenbeard/self",
+        "thebrazenbeard/hc-brain",
+        "thebrazenbeard/bt2"
+      ],
+      "description": "Multiple repositories make overlapping canonical/reusable Hyperconnectome-template claims; accessible evidence does not establish a unique successor/current canonical template."
+    }
+  ],
+  "gaps": [
+    {
+      "gap_id": "REDWORM_AUTHORSHIP",
+      "description": "Exact historical authoring repository for the redworm provider schema remains unresolved."
+    },
+    {
+      "gap_id": "FULL_E2E_QUALIFICATION",
+      "description": "Portfolio-wide fresh-chat to source-selection to Bus to provider to recovery flow has not yet been end-to-end qualified."
+    }
+  ],
+  "verification": [
+    {
+      "code": "DISCOVERY_MAP_EXACT_BINDING",
+      "passed": true,
+      "detail": "Bound to Discovery main 2881a94c... and exact map blob 71b9f8de..."
+    },
+    {
+      "code": "NO_NAME_BASED_SUPERSESSION",
+      "passed": true,
+      "detail": "Build Team 2.0 and bt2 remain distinct."
+    },
+    {
+      "code": "CONFLICT_PRESERVED",
+      "passed": true,
+      "detail": "HC canonical-template conflict remains explicit and unresolved."
+    },
+    {
+      "code": "BYTE_IDENTITY_NOT_PROMOTED_TO_ORIGIN",
+      "passed": true,
+      "detail": "Non-HC workflow-template overlap remains reuse evidence only."
+    },
+    {
+      "code": "NO_DELETION_FROM_UNPROVEN_REDUNDANCY",
+      "passed": true,
+      "detail": "No repository deletion is justified by current lineage evidence."
+    }
+  ],
+  "limitations": [
+    "This receipt validates lineage/provenance conclusions at the cited source cut; it does not prove runtime consumption.",
+    "Repository currentness can move after this receipt and must be refreshed before mutation.",
+    "Provider custody does not automatically establish historical source authorship."
+  ]
+}
