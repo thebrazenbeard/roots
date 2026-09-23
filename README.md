@@ -1,3 +1,5 @@
+> **License:** Source-visible, not open source. Original material is proprietary. Commercial use, redistribution, hosted-service use, and commercial derivative products require written permission. See [LICENSE](LICENSE) and [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md). Separately identified third-party components retain their own licenses.
+
 # roots
 
 **Roots** is an AI provenance-reconstruction system: a bootstrapping behavior, methodology, and eventually executable engine for reviewing authorized records to locate the earliest accessible evidence for a word, phrase, claim, decision, event, concept, or other referent and reconstruct how it changed over time.
