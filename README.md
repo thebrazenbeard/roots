@@ -142,6 +142,8 @@ Converts heterogeneous records into a common event schema with:
 
 Orders evidence using normalized event time, not search rank or ingestion time. Ties and uncertain timestamps stay explicit. Records with only approximate dates occupy bounded intervals rather than fabricated exact positions.
 
+Malformed or out-of-range source timestamps are retained as `UNKNOWN` time bounds rather than promoted to a fabricated time or allowed to abort reconstruction. This protects source retrieval but does not validate a source's authenticity or prove its chronology.
+
 ### 6. Lineage classifier
 
 Classifies what each occurrence is doing relative to the target and earlier evidence. The first implementation can be rule-assisted + model-assisted, but every classification should carry evidence and confidence.
