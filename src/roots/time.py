@@ -62,8 +62,12 @@ def parse_time(value: object) -> TimeBounds:
         dt = _aware(value)
         return TimeBounds(dt, dt, TemporalPrecision.EXACT)
     if isinstance(value, (int, float)) and not isinstance(value, bool):
-        seconds = float(value) / 1000.0 if abs(float(value)) >= 100_000_000_000 else float(value)
-        dt = datetime.fromtimestamp(seconds, tz=UTC)
+        try:
+            number = float(value)
+            seconds = number / 1000.0 if abs(number) >= 100_000_000_000 else number
+            dt = datetime.fromtimestamp(seconds, tz=UTC)
+        except (OverflowError, OSError, ValueError):
+            return TimeBounds(None, None, TemporalPrecision.UNKNOWN)
         return TimeBounds(dt, dt, TemporalPrecision.EXACT)
     if not isinstance(value, str):
         return TimeBounds(None, None, TemporalPrecision.UNKNOWN)
@@ -72,28 +76,32 @@ def parse_time(value: object) -> TimeBounds:
     if not raw:
         return TimeBounds(None, None, TemporalPrecision.UNKNOWN)
 
-    if re.fullmatch(r"\d{4}", raw):
-        year = int(raw)
-        return TimeBounds(
-            datetime(year, 1, 1, tzinfo=UTC),
-            datetime(year, 12, 31, 23, 59, 59, 999999, tzinfo=UTC),
-            TemporalPrecision.YEAR,
-        )
-    if re.fullmatch(r"\d{4}-\d{2}", raw):
-        year, month = map(int, raw.split("-"))
-        last_day = calendar.monthrange(year, month)[1]
-        return TimeBounds(
-            datetime(year, month, 1, tzinfo=UTC),
-            datetime(year, month, last_day, 23, 59, 59, 999999, tzinfo=UTC),
-            TemporalPrecision.MONTH,
-        )
-    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
-        year, month, day = map(int, raw.split("-"))
-        return TimeBounds(
-            datetime(year, month, day, tzinfo=UTC),
-            datetime.combine(datetime(year, month, day).date(), time.max, tzinfo=UTC),
-            TemporalPrecision.DAY,
-        )
+    try:
+        if re.fullmatch(r"\d{4}", raw):
+            year = int(raw)
+            return TimeBounds(
+                datetime(year, 1, 1, tzinfo=UTC),
+                datetime(year, 12, 31, 23, 59, 59, 999999, tzinfo=UTC),
+                TemporalPrecision.YEAR,
+            )
+        if re.fullmatch(r"\d{4}-\d{2}", raw):
+            year, month = map(int, raw.split("-"))
+            last_day = calendar.monthrange(year, month)[1]
+            return TimeBounds(
+                datetime(year, month, 1, tzinfo=UTC),
+                datetime(year, month, last_day, 23, 59, 59, 999999, tzinfo=UTC),
+                TemporalPrecision.MONTH,
+            )
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+            year, month, day = map(int, raw.split("-"))
+            start = datetime(year, month, day, tzinfo=UTC)
+            return TimeBounds(
+                start,
+                datetime.combine(start.date(), time.max, tzinfo=UTC),
+                TemporalPrecision.DAY,
+            )
+    except ValueError:
+        return TimeBounds(None, None, TemporalPrecision.UNKNOWN)
 
     iso = raw[:-1] + "+00:00" if raw.endswith("Z") else raw
     try:
