@@ -19,6 +19,19 @@ CONTENT_KEYS = ("content", "text")
 REFERENCE_KEYS = ("references", "source_refs", "back_references")
 
 
+class DuplicateJsonKeyError(ValueError):
+    """Untrusted source has ambiguous repeated object members."""
+
+
+def _unique_object_members(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise DuplicateJsonKeyError("duplicate JSON object member")
+        result[key] = value
+    return result
+
+
 def _first(record: dict[str, Any], keys: tuple[str, ...]):
     for key in keys:
         value = record.get(key)
@@ -79,14 +92,17 @@ class JsonRecordsAdapter:
                     if not line:
                         continue
                     try:
-                        value = json.loads(line)
+                        value = json.loads(line, object_pairs_hook=_unique_object_members)
                     except json.JSONDecodeError:
                         continue
                     if isinstance(value, dict):
                         yield line_no, value
             return
         try:
-            value = json.loads(self.path.read_text(encoding="utf-8", errors="replace"))
+            value = json.loads(
+                self.path.read_text(encoding="utf-8", errors="replace"),
+                object_pairs_hook=_unique_object_members,
+            )
         except (json.JSONDecodeError, OSError):
             return
         if isinstance(value, list):
