@@ -1,4 +1,4 @@
-﻿from dataclasses import replace
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from roots.model import (
@@ -109,4 +109,3 @@ def test_primary_evidence_from_unclaimed_surface_does_not_satisfy_scope():
     item = receipt(attempt=verified)
     item = replace(item, events=(replace(item.events[0], source_surface="unrelated"),))
     assert "complete.earliest_scope_bound" in failed_codes(item)
-
