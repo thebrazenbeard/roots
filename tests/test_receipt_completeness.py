@@ -50,8 +50,8 @@ def _receipt(**overrides) -> ProvenanceReceipt:
         started_at=NOW,
         completed_at=NOW,
         source_attempts=(
-            SourceAttempt(source="chat", status="SEARCHED"),
-            SourceAttempt(source="git", status="SEARCHED"),
+            SourceAttempt(source="chat", status="SEARCHED", content_verified=True, scope_exhausted=True),
+            SourceAttempt(source="git", status="SEARCHED", content_verified=True, scope_exhausted=True),
         ),
         completeness=Completeness.COMPLETE_RELATIVE_TO_ACCESSIBLE_SOURCES,
         earliest_accessible_evidence=("r1",),
@@ -194,4 +194,7 @@ def test_partial_receipt_does_not_get_strengthened_into_complete_requirements():
         verification=(),
     )
     checks = _checks(receipt)
-    assert checks == {"receipt.claim_strength": True}
+    assert checks == {
+        "receipt.claim_strength": True,
+        "partial.origin_not_established": True,
+    }
