@@ -120,6 +120,8 @@ Read authorized records without assuming one storage system. Candidate adapters 
 
 Adapters return normalized evidence records rather than making provenance judgments.
 
+The JSON/JSONL adapter rejects records with repeated JSON object members (including nested objects) as ambiguous source input. Such duplicates raise an explicit source-integrity error rather than silently selecting a last value. Ordinary malformed JSONL lines retain the existing skip behavior; neither outcome should be mistaken for a complete source search.
+
 ### 3. Candidate discovery
 
 Uses exact search first where possible, then aliases, citations/back-references, semantic expansion, and optional vector retrieval. Discovery should optimize **recall**, not decide the answer.
