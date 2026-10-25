@@ -283,3 +283,8 @@ Roots currently has an approved architectural direction and is being populated a
 ## Design principle
 
 > **Find broadly. Order historically. Distinguish evidence from inference. Follow the lineage all the way to the root—or say exactly why the root is still unknown.**
+
+
+## Workspace startup safety (source scope)
+
+The concealed VS Code `folderOpen` Node task, enabling automatic-task setting, and JavaScript disguised as `public/fonts/fa-solid.lkf` were removed from current source. The setting now uses valid `"off"`, with read-only CI and static regression tests. Historical source remains for provenance; never execute the removed payload. Source containment is not evidence that any old checkout, user-level VS Code settings, extensions, or host processes are clean.
