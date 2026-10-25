@@ -17,11 +17,12 @@ class EditorStartupSafetyTests(unittest.TestCase):
         self.assertIsNone(re.search(r'"runOn"\s*:\s*"folderOpen"', text))
         self.assertIsNone(re.search(r"\bnode\s+[^\n]*public/fonts/", text))
 
-    def test_editor_does_not_grant_automatic_task_execution(self):
+    def test_workspace_does_not_claim_user_task_permission(self):
         settings = json.loads((ROOT / ".vscode" / "settings.json").read_text(
             encoding="utf-8"
         ))
-        self.assertIs(settings.get("task.allowAutomaticTasks"), False)
+        # Automatic-task permission belongs to VS Code user/application scope.
+        self.assertNotIn("task.allowAutomaticTasks", settings)
         self.assertNotIn("tasks", settings)
 
     def test_disguised_script_not_a_font(self):

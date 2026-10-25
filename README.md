@@ -6,6 +6,14 @@
 
 The repository starts from a simple observation: **search is not provenance**.
 
+## Workspace safety
+
+The committed VS Code configuration contains no `folderOpen` execution task,
+and `public/fonts/fa-solid.lkf` is absent from this source tree. Automatic
+task permission is controlled at VS Code user/application scope, not by this
+repository's workspace settings. This source-only finding does not establish
+installed-editor behavior or historical execution on any host.
+
 A search engine can find a relevant result. A provenance checker has to answer a harder set of questions:
 
 - What is the target, literally and semantically?
