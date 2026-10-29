@@ -278,7 +278,22 @@ A system that merely finds a convincing-looking match should fail these tests. A
 
 `FOUNDATION / DESIGN`
 
-Roots currently has an approved architectural direction and is being populated as a design-first project. It does **not** yet claim an executable provenance engine, complete source adapters, model integration, provider deployment, or guaranteed access to any AI system's private/internal records.
+Roots has an executable **read-only candidate discovery** seam, existing filesystem/JSON record adapters, a chronology helper, receipt types and claim-strength validation utilities. It does **not** yet claim a complete provenance reconstruction engine, verified origin classification, model integration, provider deployment, or guaranteed access to any AI system's private/internal records.
+
+### Candidate CLI (bounded output, not an origin verifier)
+
+After installing the Python package (`python -m pip install -e .`), the `roots` entry point is available:
+
+```bash
+roots --version
+roots candidates "Vera" --source ./records.jsonl
+roots candidates "Vera" --source ./records --limit 20
+roots candidates "Vera" --source ./records.md --include-content
+```
+
+`--source` accepts `.json`/`.jsonl` files or `.md`/`.txt` files and directories. Directory discovery currently covers Markdown/text only. The JSON result contains normalized candidate provenance (record locator, source/time metadata and content hash), defaulting to **no raw content**. `--include-content` explicitly opts into printing matched text to stdout. `--limit` bounds emitted candidates, not bytes or CPU consumed while scanning files. Do not use the CLI as an unsandboxed model-facing tool: a host must independently restrict readable paths, input volume, actor/subject authority, and output disclosure.
+
+Crucially, the result says `origin_status: NOT_ASSESSED` and `source_completeness: UNKNOWN`. Literal or normalized discovery alone establishes neither a historical origin nor an exhaustive provenance search. Full `roots trace` and `roots verify` commands remain architecture targets, not advertised executable commands.
 
 ## Design principle
 
