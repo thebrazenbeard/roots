@@ -293,6 +293,22 @@ roots candidates "Vera" --source ./records.md --include-content
 
 `--source` accepts `.json`/`.jsonl` files or `.md`/`.txt` files and directories. Directory discovery currently covers Markdown/text only. The JSON result contains normalized candidate provenance (record locator, source/time metadata and content hash), defaulting to **no raw content**. `--include-content` explicitly opts into printing matched text to stdout. `--limit` bounds emitted candidates, not bytes or CPU consumed while scanning files. Do not use the CLI as an unsandboxed model-facing tool: a host must independently restrict readable paths, input volume, actor/subject authority, and output disclosure.
 
+### Account export provenance projection (source-only)
+
+`roots.chat_export` now provides a metadata-only, streaming projection for
+manifest-declared ChatGPT conversation shards. It retains original
+conversation/mapping/message identifiers and timestamp provenance while
+hard-coding every result as historical, untrusted, and **not admitted** to
+memory. It rejects missing/duplicate numbered shards and duplicate
+conversation IDs. Reply chains are not automatically treated as corrections.
+
+This is not a ZIP authenticator, full-history search API, memory-admission
+engine, or deployed model integration. Read the
+[ChatGPT export provenance contract](docs/chat-export-provenance.md) before
+wiring an authenticated local STM/Ingest source into Roots. Real conversation
+content, private identifiers and archive fingerprints must remain out of public
+Git history and CI.
+
 Crucially, the result says `origin_status: NOT_ASSESSED` and `source_completeness: UNKNOWN`. Literal or normalized discovery alone establishes neither a historical origin nor an exhaustive provenance search. Full `roots trace` and `roots verify` commands remain architecture targets, not advertised executable commands.
 
 ## Design principle
