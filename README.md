@@ -1,305 +1,100 @@
-> **License:** Source-visible, not open source. Original material is proprietary. Commercial use, redistribution, hosted-service use, and commercial derivative products require written permission. See [LICENSE](LICENSE) and [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md). Separately identified third-party components retain their own licenses.
+> **License:** Source-visible, **not open source**. Original material is proprietary. Private noncommercial evaluation and review are permitted under [LICENSE](LICENSE); commercial use, redistribution, hosted use, and commercial derivatives require separate written permission. See [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md). Third-party components retain their own rights.
 
-# roots
+# Roots — evidence provenance tools
 
-**Roots** is an AI provenance-reconstruction system: a bootstrapping behavior, methodology, and eventually executable engine for reviewing authorized records to locate the earliest accessible evidence for a word, phrase, claim, decision, event, concept, or other referent and reconstruct how it changed over time.
+Roots is an experimental Python toolkit for finding candidate source records and representing the evidence needed to investigate where a claim, term, decision, or concept came from. Its central distinction is simple: **a search result is not proof of origin**.
 
-The repository starts from a simple observation: **search is not provenance**.
+The current product is a **local, read-only candidate-discovery CLI and Python evidence/verification library**. It can find literal/normalized matches and relation-marked candidate leads while preserving source metadata, but it does not yet reconstruct complete semantic lineages or prove historical origins.
 
-A search engine can find a relevant result. A provenance checker has to answer a harder set of questions:
+## What is available
 
-- What is the target, literally and semantically?
-- What is the earliest accessible evidence for it?
-- Is that evidence the origin, or only the oldest thing currently available?
-- What earlier conceptual ancestors are related without being the same thing?
-- How did later uses derive from, reinterpret, formalize, correct, supersede, or contradict earlier ones?
-- Which links are directly evidenced, which are inferred, and which remain unresolved?
-- What does the target mean now, and how does the current meaning relate to its history?
+| Capability | Current implementation | Boundary |
+| --- | --- | --- |
+| Candidate discovery | `roots candidates` scans local Markdown/text or JSON/JSONL sources for literal/normalized matches; adapters may also return records marked with a nonempty `relation` field even without a query match | Results follow adapter discovery order, **not** relevance or proven historical order |
+| Evidence normalization | Filesystem and JSON-record adapters produce typed evidence with record IDs, locators, timestamps when present, and content hashes | Missing or ambiguous metadata remains missing or ambiguous |
+| Temporal comparison | Python helpers represent bounded/uncertain event times and identify earliest *accessible* candidates | Overlapping or unknown intervals are not arbitrarily ordered |
+| Claim-strength validation | Typed receipts and `validate_receipt_claims` guard against unsupported completeness/origin assertions | Validation checks consistency of supplied evidence; it does not independently obtain evidence |
+| Full lineage reconstruction | Architecture and adversarial-test design in `docs/` | **Not implemented** as a `trace`, `verify`, hosted service, vector search, or model-authenticated agent |
 
-Roots is intended to make those questions systematic enough that an AI can perform them reliably on its own accessible records rather than relying on vague recollection or relevance-ranked search results.
+Roots is useful for local source review, data-provenance research, and building a provenance-conscious workflow around records an application is already authorized to read.
 
-## Core idea
+## Quick start
 
-Roots treats provenance as a **temporally ordered evidence graph**.
-
-Candidate evidence may be discovered by lexical search, semantic search, metadata, links, references, embeddings, or model reasoning. Discovery order does **not** determine provenance order. Once candidate evidence is collected, Roots normalizes timestamps and source identities, then reviews the evidence from **oldest to newest**.
-
-The default provenance walk is:
-
-```text
-TARGET
-  ↓
-NORMALIZE LITERAL + SEMANTIC REFERENT
-  ↓
-DISCOVER CANDIDATE RECORDS
-  ↓
-NORMALIZE SOURCE / TIME / SPEAKER / LOCATOR
-  ↓
-SORT OLDEST → NEWEST
-  ↓
-REVIEW ASCENDING CHRONOLOGY
-  ↓
-CLASSIFY EACH OCCURRENCE
-  ↓
-LINK DERIVATIONS / CORRECTIONS / SUPERSESSIONS
-  ↓
-CHECK GAPS / CONFLICTS / BACK-REFERENCES
-  ↓
-RECONSTRUCT LINEAGE
-  ↓
-EMIT PROVENANCE RECEIPT
-```
-
-A newer record that says "this came from an earlier event" is a **lead**, not proof that the earlier event has been found. Roots follows the lead backward to candidate evidence, adds that evidence to the corpus, and then restarts the interpretive walk from the oldest accessible point.
-
-## Non-negotiable invariants
-
-Roots should eventually enforce these as executable contracts:
-
-1. **Ascending chronology is mandatory for interpretation.** Candidate discovery may happen in any order. Provenance reconstruction does not.
-2. **Oldest accessible evidence is not automatically the origin.** If earlier evidence may be missing, the result must say so.
-3. **Literal occurrence and semantic ancestry are different relations.** A concept can inspire a phrase without being the first use of that phrase.
-4. **Relevance is not lineage.** Semantic similarity can discover candidates but cannot establish derivation by itself.
-5. **Later claims about earlier history are leads until corroborated.** A retrospective statement is not a time machine.
-6. **Speaker, source, timestamp, and locator remain attached to evidence.** Provenance without provenance metadata is storytelling.
-7. **Direct evidence and inference stay typed separately.** Roots may infer a likely derivation, but it must not rewrite inference as documented fact.
-8. **Corrections and supersessions do not erase history.** The old state remains part of the lineage even when it no longer governs current meaning.
-9. **Gaps remain gaps.** Roots should report unresolved intervals instead of inventing connective tissue.
-10. **Current meaning is a terminal interpretation, not the starting assumption.** The system must reconstruct how the target arrived there.
-
-## Evidence classes
-
-An occurrence can have more than one relation, but Roots should distinguish at least:
-
-- `EARLIEST_ACCESSIBLE_EVIDENCE` — oldest evidence currently available to the run.
-- `ORIGIN_CLAIM` — a record explicitly claiming an origin; not automatically verified.
-- `FIRST_LITERAL_OCCURRENCE` — earliest verified occurrence of the exact or normalized literal target.
-- `CONCEPTUAL_ANCESTOR` — earlier concept, phrase, event, or pattern that materially contributed to the target without being the target itself.
-- `DERIVATION` — evidence that one occurrence developed from another.
-- `REUSE` — later use preserving substantially the same meaning.
-- `REINTERPRETATION` — later use assigning materially different meaning.
-- `FORMALIZATION` — informal material turned into an explicit rule, label, protocol, or definition.
-- `CORRECTION` — later evidence correcting an earlier representation.
-- `SUPERSESSION` — later state replaces earlier state as current without deleting history.
-- `CONTRADICTION` — evidence cannot be reconciled without preserving a conflict.
-- `CURRENT_MEANING` — best-supported present interpretation within the requested scope.
-
-## Why not just use embeddings?
-
-Embeddings are useful for finding semantically related evidence, especially when wording changed. They are not a provenance authority.
-
-A semantically similar old record may be unrelated. A highly relevant recent record may describe an earlier event but not contain the origin. A later correction can embed almost identically to the statement it supersedes. Roots therefore treats vectors as an **optional discovery index**, while chronology, source metadata, explicit links, and evidence typing govern reconstruction.
-
-## Proposed architecture
-
-Roots is designed as a hybrid of deterministic provenance machinery and an AI-facing behavioral/bootstrap layer.
-
-### 1. Target parser
-
-Accepts a word, phrase, event description, claim, identifier, or semantic referent and creates a `TargetSpec` containing:
-
-- literal forms;
-- normalized forms;
-- aliases supplied by evidence;
-- semantic description;
-- scope constraints;
-- requested source surfaces;
-- optional time bounds.
-
-### 2. Source adapters
-
-Read authorized records without assuming one storage system. Candidate adapters include:
-
-- chat/conversation exports;
-- Markdown/text archives;
-- Git history;
-- structured JSON/JSONL;
-- database/event-ledger projections;
-- API or connector search results;
-- optional vector indexes.
-
-Adapters return normalized evidence records rather than making provenance judgments.
-
-### 3. Candidate discovery
-
-Uses exact search first where possible, then aliases, citations/back-references, semantic expansion, and optional vector retrieval. Discovery should optimize **recall**, not decide the answer.
-
-### 4. Evidence normalizer
-
-Converts heterogeneous records into a common event schema with:
-
-- record ID;
-- source surface;
-- source locator;
-- author/speaker;
-- event timestamp and timestamp quality;
-- raw excerpt or content reference;
-- content hash where available;
-- retrieval method;
-- confidence and limitations.
-
-### 5. Chronology engine
-
-Orders evidence using normalized event time, not search rank or ingestion time. Ties and uncertain timestamps stay explicit. Records with only approximate dates occupy bounded intervals rather than fabricated exact positions.
-
-### 6. Lineage classifier
-
-Classifies what each occurrence is doing relative to the target and earlier evidence. The first implementation can be rule-assisted + model-assisted, but every classification should carry evidence and confidence.
-
-### 7. Provenance graph
-
-Stores occurrences as nodes and typed relationships as edges, for example:
-
-```text
-conceptual ancestor ──INSPIRED──▶ phrase
-phrase ──REUSED──▶ later phrase
-later phrase ──FORMALIZED_AS──▶ rule
-rule ──CORRECTED_BY──▶ amended rule
-amended rule ──CURRENT_AS──▶ current meaning
-```
-
-The graph preserves chronology while allowing provenance to branch instead of forcing every history into one linear story.
-
-### 8. Contradiction and gap analyzer
-
-Checks for:
-
-- mutually incompatible origin claims;
-- back-references to evidence not yet retrieved;
-- suspicious chronology inversions;
-- missing source locators;
-- gaps between claimed derivation steps;
-- later summaries masquerading as primary evidence;
-- semantic ancestors accidentally promoted to literal origins.
-
-### 9. Receipt generator
-
-Produces both human-readable and machine-readable output containing:
-
-- target;
-- corpus scope;
-- earliest accessible evidence;
-- first literal occurrence if established;
-- conceptual ancestors;
-- chronological lineage;
-- current meaning;
-- unresolved gaps/conflicts;
-- evidence used;
-- inference edges;
-- completeness statement.
-
-### 10. AI bootstrap contract
-
-Roots should also define behavior for an AI using the system:
-
-```text
-WHEN provenance/origin/history/derivation matters:
-  invoke Roots before asserting lineage
-  collect broadly
-  reconstruct oldest → newest
-  distinguish accessible-oldest from proven origin
-  preserve literal vs semantic identity
-  cite evidence at every material transition
-  stop only when lineage is supported or explicitly unresolved
-```
-
-This behavioral contract is deliberately separate from the engine. Prompt instructions alone are fallible; engine logic alone cannot decide every semantic relationship. Roots is intended to combine both.
-
-## Potential implementation
-
-The first executable version should be deliberately small: a local Python package and CLI that can ingest a directory of timestamped text/JSON records and reconstruct provenance for a query.
-
-A future interface could look like:
+Requires **Python 3.12 or newer**. From a checkout of this repository:
 
 ```bash
-roots trace "target phrase" --source ./records
-roots trace "target phrase" --source ./records --format json
-roots trace "event description" --source ./records --semantic
-roots verify receipt.json
-```
-
-The initial implementation should prioritize deterministic chronology and evidence bookkeeping over sophisticated AI inference. Semantic/model-assisted classification can be added behind an interface so it never becomes the sole authority for ordering or source facts.
-
-## Planned repository layout
-
-```text
-README.md
-
-docs/
-  methodology.md
-  terminology.md
-  superpowers/specs/
-    2026-09-16-roots-provenance-engine-design.md
-
-src/roots/
-  model.py
-  target.py
-  adapters/
-  discovery.py
-  chronology.py
-  lineage.py
-  graph.py
-  verification.py
-  receipt.py
-  cli.py
-
-schemas/
-  evidence-event.schema.json
-  provenance-receipt.schema.json
-
-tests/
-  fixtures/
-  test_chronology.py
-  test_lineage.py
-  test_receipts.py
-  test_regressions.py
-```
-
-Executable source is intentionally not claimed yet. This README is the architecture target for the first implementation.
-
-## First adversarial test family
-
-Roots should be built against histories that deliberately tempt a model into the wrong answer. Synthetic fixtures will cover cases such as:
-
-- search returns the newest summary first;
-- the newest summary names an older source that must still be retrieved;
-- an earlier concept inspires a later phrase but is not its literal origin;
-- two records make conflicting origin claims;
-- the oldest accessible record explicitly says it is repeating something even older that is unavailable;
-- a correction supersedes a statement without deleting its historical role;
-- several near-duplicate paraphrases create false confidence;
-- timestamps are missing, approximate, or tied;
-- ingestion order differs from event order;
-- semantic similarity is high but derivation is unsupported.
-
-A system that merely finds a convincing-looking match should fail these tests. A Roots result should survive them.
-
-## Status
-
-`FOUNDATION / DESIGN`
-
-Roots has an executable **read-only candidate discovery** seam, existing filesystem/JSON record adapters, a chronology helper, receipt types and claim-strength validation utilities. It does **not** yet claim a complete provenance reconstruction engine, verified origin classification, model integration, provider deployment, or guaranteed access to any AI system's private/internal records.
-
-### Candidate CLI (bounded output, not an origin verifier)
-
-After installing the Python package (`python -m pip install -e .`), the `roots` entry point is available:
-
-```bash
+python -m pip install -e .
 roots --version
-roots candidates "Vera" --source ./records.jsonl
-roots candidates "Vera" --source ./records --limit 20
-roots candidates "Vera" --source ./records.md --include-content
+roots candidates "provenance" --source ./docs/methodology.md --limit 5
 ```
 
-`--source` accepts `.json`/`.jsonl` files or `.md`/`.txt` files and directories. Directory discovery currently covers Markdown/text only. The JSON result contains normalized candidate provenance (record locator, source/time metadata and content hash), defaulting to **no raw content**. `--include-content` explicitly opts into printing matched text to stdout. `--limit` bounds emitted candidates, not bytes or CPU consumed while scanning files. Do not use the CLI as an unsandboxed model-facing tool: a host must independently restrict readable paths, input volume, actor/subject authority, and output disclosure.
+That example searches a repository document and emits JSON with a candidate's locator, source metadata, event-time precision, content hash, and limitations. Its output explicitly contains:
 
-Crucially, the result says `origin_status: NOT_ASSESSED` and `source_completeness: UNKNOWN`. Literal or normalized discovery alone establishes neither a historical origin nor an exhaustive provenance search. Full `roots trace` and `roots verify` commands remain architecture targets, not advertised executable commands.
+```json
+{
+  "operation": "candidate_discovery",
+  "origin_status": "NOT_ASSESSED",
+  "source_completeness": "UNKNOWN"
+}
+```
 
-## Design principle
+The JSON fragment shows selected fields, not an entire response. A returned candidate may be a text match **or** a relation-marked lead; neither establishes that the query semantically matches the record or that an origin has been found.
 
-> **Find broadly. Order historically. Distinguish evidence from inference. Follow the lineage all the way to the root—or say exactly why the root is still unknown.**
+### Source formats and output controls
 
+```bash
+roots candidates "build decision" --source ./records.jsonl --limit 20
+roots candidates "design note" --source ./notes --limit 20
+roots candidates "release" --source ./notes/release.md --include-content
+```
 
-## Workspace startup safety (source scope)
+- A file may be `.md`, `.txt`, `.json`, or `.jsonl`. **Directory scans currently include only `.md` and `.txt`**, recursively.
+- Repeat `--source` to search multiple sources. JSON records can supply fields such as `record_id`, `timestamp`, `speaker`, and `content`; missing fields are not guessed.
+- Default output omits raw matched content. `--include-content` prints it to standard output, so use it only where the output destination is authorized.
+- `--limit` accepts 1–1000 and limits **emitted candidates**, not the total files examined, bytes read, or CPU spent. A successful run does not establish source completeness.
+- The executable seam combines literal/normalized matching with optional relation-marked leads. The presence of a `relation` field is **not** semantic scoring; the semantic/vector search described in design documents is not available through this CLI.
 
-The concealed VS Code `folderOpen` Node task, enabling automatic-task setting, and JavaScript disguised as `public/fonts/fa-solid.lkf` were removed from current source. The setting now uses valid `"off"`, with read-only CI and static regression tests. Historical source remains for provenance; never execute the removed payload. Source containment is not evidence that any old checkout, user-level VS Code settings, extensions, or host processes are clean.
+## Python integration
+
+The package is `roots-provenance`; import names are under `roots`.
+
+| Interface | Purpose | Source |
+| --- | --- | --- |
+| `TargetSpec` / `EvidenceEvent` / `ProvenanceReceipt` | Typed target, evidence, and receipt structures | [`src/roots/model.py`](src/roots/model.py) |
+| `FilesystemAdapter` | Discover and normalize local Markdown/text records | [`src/roots/adapters/filesystem.py`](src/roots/adapters/filesystem.py) |
+| `JsonRecordsAdapter` | Discover and normalize records from JSON/JSONL files | [`src/roots/adapters/json_records.py`](src/roots/adapters/json_records.py) |
+| `compare_time_bounds` / `earliest_events` | Handle ordering with uncertainty and overlapping intervals | [`src/roots/time.py`](src/roots/time.py) |
+| `validate_receipt_claims` | Check that a receipt's asserted completeness/origin strength matches its stated evidence | [`src/roots/verification.py`](src/roots/verification.py) |
+
+These are source-level Python interfaces, not a stable remote API. Downstream callers must independently authenticate their actors, enforce permitted source scopes, and gate any effects.
+
+## Provenance principles
+
+Roots keeps several questions separate:
+
+1. **Discovery:** Which records matched the query, or were admitted as relation-marked leads, in the sources actually searched?
+2. **Time:** Which events demonstrably precede others, and which have unknown or overlapping time bounds?
+3. **Attribution:** Who supplied each record, where is the primary locator, and what was inspected?
+4. **Inference:** Does evidence show literal reuse, conceptual ancestry, correction, or merely semantic resemblance?
+5. **Completeness:** What requested sources were inaccessible, unsearched, or unresolved?
+
+An oldest *accessible* match is not automatically the original occurrence. Later retrospective accounts are leads until corroborated against earlier primary records. A valid data structure, hash, or model-generated interpretation is not an independent truth or authorization certificate.
+
+See [methodology](docs/methodology.md), [terminology](docs/terminology.md), the [AI bootstrap contract](docs/bootstrap-contract.md), and the [hostile test matrix](docs/hostile-test-matrix.md) for the research design and proposed future engine.
+
+## Test and security posture
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest -q
+```
+
+The test suite exercises candidate discovery, metadata/receipt constraints, disputed and incomplete evidence, uncertain interval ordering, and workspace-startup safety. It does **not** establish model reasoning quality or provenance over uninspected/private corpora.
+
+**Security:** The CLI reads local paths available to its operating-system account and can reveal locators or matched content in JSON output. It is not an authorization service, path sandbox, disclosure filter, or safe unrestricted model tool. Hosts must control filesystem access, corpus size, actor/subject boundaries, and downstream publication. Historical source contained a concealed editor auto-task and disguised executable payload that were removed from the current tree; the safety tests check the current workspace configuration, not every old checkout or user's editor/host environment. See [SECURITY.md](SECURITY.md).
+
+## Status and licensing
+
+Current status: **v0.1 foundation / candidate discovery**, with a larger provenance engine still in design. There is no authenticated connector, live provider binding, origin-verification service, complete lineage graph, or deployed model integration.
+
+Read the [contribution terms](CONTRIBUTING.md), [security policy](SECURITY.md), [source license](LICENSE), and [commercial terms](COMMERCIAL_LICENSE.md) before incorporating Roots elsewhere. Public visibility does not grant unrestricted reuse or redistribution.
