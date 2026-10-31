@@ -4,13 +4,13 @@
 
 Roots is an experimental Python toolkit for finding candidate source records and representing the evidence needed to investigate where a claim, term, decision, or concept came from. Its central distinction is simple: **a search result is not proof of origin**.
 
-The current product is a **local, read-only candidate-discovery CLI and Python evidence/verification library**. It can retrieve matching records and preserve their source metadata, but it does not yet reconstruct complete semantic lineages or prove historical origins.
+The current product is a **local, read-only candidate-discovery CLI and Python evidence/verification library**. It can find literal/normalized matches and relation-marked candidate leads while preserving source metadata, but it does not yet reconstruct complete semantic lineages or prove historical origins.
 
 ## What is available
 
 | Capability | Current implementation | Boundary |
 | --- | --- | --- |
-| Candidate discovery | `roots candidates` scans local Markdown/text or JSON/JSONL sources for literal/normalized matches | Results follow adapter discovery order, **not** proven historical order |
+| Candidate discovery | `roots candidates` scans local Markdown/text or JSON/JSONL sources for literal/normalized matches; adapters may also return records marked with a nonempty `relation` field even without a query match | Results follow adapter discovery order, **not** relevance or proven historical order |
 | Evidence normalization | Filesystem and JSON-record adapters produce typed evidence with record IDs, locators, timestamps when present, and content hashes | Missing or ambiguous metadata remains missing or ambiguous |
 | Temporal comparison | Python helpers represent bounded/uncertain event times and identify earliest *accessible* candidates | Overlapping or unknown intervals are not arbitrarily ordered |
 | Claim-strength validation | Typed receipts and `validate_receipt_claims` guard against unsupported completeness/origin assertions | Validation checks consistency of supplied evidence; it does not independently obtain evidence |
@@ -38,7 +38,7 @@ That example searches a repository document and emits JSON with a candidate's lo
 }
 ```
 
-The JSON fragment shows selected fields, not an entire response. A match means only that a candidate was found in the specified input.
+The JSON fragment shows selected fields, not an entire response. A returned candidate may be a text match **or** a relation-marked lead; neither establishes that the query semantically matches the record or that an origin has been found.
 
 ### Source formats and output controls
 
@@ -52,7 +52,7 @@ roots candidates "release" --source ./notes/release.md --include-content
 - Repeat `--source` to search multiple sources. JSON records can supply fields such as `record_id`, `timestamp`, `speaker`, and `content`; missing fields are not guessed.
 - Default output omits raw matched content. `--include-content` prints it to standard output, so use it only where the output destination is authorized.
 - `--limit` accepts 1–1000 and limits **emitted candidates**, not the total files examined, bytes read, or CPU spent. A successful run does not establish source completeness.
-- Search is literal/normalized in this executable seam; the broader semantic/vector approach described in design documents is not available through this CLI.
+- The executable seam combines literal/normalized matching with optional relation-marked leads. The presence of a `relation` field is **not** semantic scoring; the semantic/vector search described in design documents is not available through this CLI.
 
 ## Python integration
 
@@ -72,7 +72,7 @@ These are source-level Python interfaces, not a stable remote API. Downstream ca
 
 Roots keeps several questions separate:
 
-1. **Discovery:** Which records matched the request in the sources actually searched?
+1. **Discovery:** Which records matched the query, or were admitted as relation-marked leads, in the sources actually searched?
 2. **Time:** Which events demonstrably precede others, and which have unknown or overlapping time bounds?
 3. **Attribution:** Who supplied each record, where is the primary locator, and what was inspected?
 4. **Inference:** Does evidence show literal reuse, conceptual ancestry, correction, or merely semantic resemblance?
