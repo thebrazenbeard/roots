@@ -103,6 +103,12 @@ class SemanticTriggerTests(unittest.TestCase):
             TriggerRule("no-patterns", "source query", "scope")
         with self.assertRaises(ValueError):
             TriggerRule("empty-scope", "source query", "", phrase_forms=("meaning",))
+        with self.assertRaises(ValueError):
+            TriggerRule("bool-window", "source query", "scope", phrase_forms=("meaning",), max_window_tokens=True)
+        with self.assertRaises(ValueError):
+            TriggerRule("bad-forms", "source query", "scope", phrase_forms="meaning")
+        with self.assertRaises(ValueError):
+            TriggerRule("bad-groups", "source query", "scope", semantic_groups=("meaning", "change"))
 
 
 if __name__ == "__main__":
