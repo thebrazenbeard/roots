@@ -115,7 +115,7 @@ def resolve_provenance_trigger(
     text: str,
     rules: Sequence[TriggerRule],
     *,
-    allow_lookup: bool = True,
+    allow_lookup: bool = False,
 ) -> TriggerDecision:
     """Resolve *whether to request* provenance lookup, without performing one.
 
@@ -124,7 +124,7 @@ def resolve_provenance_trigger(
     memory, establishes origin, changes authority, or runs control commands.
     """
 
-    if not allow_lookup:
+    if allow_lookup is not True:
         return TriggerDecision(TriggerStatus.SUPPRESSED)
     if not isinstance(text, str) or len(text) > MAX_TEXT_CHARS:
         return TriggerDecision(TriggerStatus.UNRESOLVED, limitations=("input_not_bounded",))
