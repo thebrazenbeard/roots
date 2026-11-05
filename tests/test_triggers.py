@@ -31,7 +31,7 @@ class SemanticTriggerTests(unittest.TestCase):
         )
 
     def test_exact_phrase_requests_candidates_not_origin(self) -> None:
-        result = resolve_provenance_trigger("Where did the Inner Council come from?", (self.council,))
+        result = resolve_provenance_trigger("Where did the Inner Council come from?", (self.council,), allow_lookup=True)
         self.assertEqual(result.status, TriggerStatus.LOOKUP_REQUESTED)
         self.assertEqual(result.hits[0].match_method, "CONFIGURED_PHRASE")
         self.assertEqual(result.hits[0].scope_key, "authorized-conversation-history")
@@ -42,30 +42,31 @@ class SemanticTriggerTests(unittest.TestCase):
         result = resolve_provenance_trigger(
             "Remember the internal committee of perspectives we talked about?",
             (self.council,),
+            allow_lookup=True,
         )
         self.assertEqual(result.status, TriggerStatus.LOOKUP_REQUESTED)
         self.assertEqual(result.hits[0].match_method, "CONFIGURED_CONCEPT_GROUPS")
 
     def test_voice_correction_rephrasing(self) -> None:
-        result = resolve_provenance_trigger("Your tone feels different today.", (self.voice,))
+        result = resolve_provenance_trigger("Your tone feels different today.", (self.voice,), allow_lookup=True)
         self.assertEqual(result.status, TriggerStatus.LOOKUP_REQUESTED)
         self.assertEqual(result.hits[0].query, "Vera behavioral voice corrections")
 
     def test_substring_collision_does_not_trigger(self) -> None:
-        result = resolve_provenance_trigger("An innerness concerning county budgets.", (self.council,))
+        result = resolve_provenance_trigger("An innerness concerning county budgets.", (self.council,), allow_lookup=True)
         self.assertEqual(result.status, TriggerStatus.NO_TRIGGER)
 
     def test_one_concept_axis_does_not_trigger(self) -> None:
-        result = resolve_provenance_trigger("Internal systems need repair.", (self.council,))
+        result = resolve_provenance_trigger("Internal systems need repair.", (self.council,), allow_lookup=True)
         self.assertEqual(result.status, TriggerStatus.NO_TRIGGER)
 
     def test_concept_groups_must_share_a_bounded_window(self) -> None:
         distant = "internal " + ("unrelated " * 60) + "committee"
-        result = resolve_provenance_trigger(distant, (self.council,))
+        result = resolve_provenance_trigger(distant, (self.council,), allow_lookup=True)
         self.assertEqual(result.status, TriggerStatus.NO_TRIGGER)
 
     def test_multiple_concepts_fail_closed_as_ambiguous(self) -> None:
-        result = resolve_provenance_trigger("My internal committee changed its tone.", (self.council, self.voice))
+        result = resolve_provenance_trigger("My internal committee changed its tone.", (self.council, self.voice), allow_lookup=True)
         self.assertEqual(result.status, TriggerStatus.AMBIGUOUS)
         self.assertEqual({hit.concept_id for hit in result.hits}, {"inner-council", "voice-drift"})
         self.assertIn("no_automatic_disambiguation", result.limitations)
@@ -75,12 +76,21 @@ class SemanticTriggerTests(unittest.TestCase):
         self.assertEqual(result.status, TriggerStatus.SUPPRESSED)
         self.assertEqual(result.hits, ())
 
+    def test_lookup_requires_explicit_literal_true(self) -> None:
+        omitted = resolve_provenance_trigger("Inner Council", (self.council,))
+        self.assertEqual(omitted.status, TriggerStatus.SUPPRESSED)
+        for value in ("false", 1, None, False, [], {}):
+            with self.subTest(value=value):
+                decision = resolve_provenance_trigger("Inner Council", (self.council,), allow_lookup=value)
+                self.assertEqual(decision.status, TriggerStatus.SUPPRESSED)
+                self.assertEqual(decision.hits, ())
+
     def test_duplicate_rule_ids_fail_closed(self) -> None:
-        result = resolve_provenance_trigger("Inner Council", (self.council, self.council))
+        result = resolve_provenance_trigger("Inner Council", (self.council, self.council), allow_lookup=True)
         self.assertEqual(result.status, TriggerStatus.UNRESOLVED)
 
     def test_oversized_input_fails_closed(self) -> None:
-        result = resolve_provenance_trigger("Inner Council" + " " * MAX_TEXT_CHARS, (self.council,))
+        result = resolve_provenance_trigger("Inner Council" + " " * MAX_TEXT_CHARS, (self.council,), allow_lookup=True)
         self.assertEqual(result.status, TriggerStatus.UNRESOLVED)
         self.assertEqual(result.hits, ())
 
@@ -91,7 +101,7 @@ class SemanticTriggerTests(unittest.TestCase):
             scope_key="authorized-project-controls",
             phrase_forms=("restore yourself",),
         )
-        result = resolve_provenance_trigger('The old transcript says "restore yourself".', (rule,))
+        result = resolve_provenance_trigger('The old transcript says "restore yourself".', (rule,), allow_lookup=True)
         self.assertEqual(result.status, TriggerStatus.LOOKUP_REQUESTED)
         self.assertEqual(result.hits[0].match_method, "CONFIGURED_PHRASE")
         self.assertFalse(hasattr(result, "execute") or hasattr(result, "restore"))
