@@ -59,8 +59,10 @@ class TriggerRule:
             for value in (self.concept_id, self.query, self.scope_key)
         ):
             raise ValueError("concept_id, query and scope_key must be bounded nonblank strings")
-        if not 8 <= self.max_window_tokens <= 48:
-            raise ValueError("max_window_tokens must be between 8 and 48")
+        if type(self.max_window_tokens) is not int or not 8 <= self.max_window_tokens <= 48:
+            raise ValueError("max_window_tokens must be an integer between 8 and 48")
+        if type(self.phrase_forms) is not tuple or type(self.semantic_groups) is not tuple:
+            raise ValueError("trigger forms and concept groups must be tuples")
         if not self.phrase_forms and not self.semantic_groups:
             raise ValueError("a trigger requires phrase_forms or semantic_groups")
         if len(self.phrase_forms) > 16 or len(self.semantic_groups) > 8:
@@ -69,7 +71,7 @@ class TriggerRule:
             raise ValueError("semantic triggering requires at least two independent groups")
         forms = list(self.phrase_forms)
         for group in self.semantic_groups:
-            if not 1 <= len(group) <= 16:
+            if type(group) is not tuple or not 1 <= len(group) <= 16:
                 raise ValueError("concept groups must contain 1-16 alternatives")
             forms.extend(group)
         if any(
