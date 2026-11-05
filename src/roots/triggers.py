@@ -102,12 +102,11 @@ def _match(words: tuple[str, ...], rule: TriggerRule) -> str | None:
     if any(_contains(words, _tokens(form)) for form in rule.phrase_forms):
         return "CONFIGURED_PHRASE"
     if rule.semantic_groups:
+        # Tokenize reviewed alternatives only once per utterance/rule.
+        groups = tuple(tuple(_tokens(form) for form in group) for group in rule.semantic_groups)
         for start in range(len(words)):
             window = words[start : start + rule.max_window_tokens]
-            if all(
-                any(_contains(window, _tokens(alternative)) for alternative in group)
-                for group in rule.semantic_groups
-            ):
+            if all(any(_contains(window, alternative) for alternative in group) for group in groups):
                 return "CONFIGURED_CONCEPT_GROUPS"
     return None
 
