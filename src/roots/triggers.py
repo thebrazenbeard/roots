@@ -16,6 +16,23 @@ MAX_TEXT_CHARS = 8192
 MAX_TEXT_TOKENS = 512
 MAX_RULES = 64
 _WORDS = re.compile(r"[^\W_]+", re.UNICODE)
+# These are conservative surface checks, not a general-purpose intent parser.
+# A host's explicit privacy/opt-out decision still takes precedence.
+_LOOKUP_NEGATION = re.compile(
+    r"\b(?:do\s+not|don't|never|please\s+don't|stop)\s+"
+    r"(?:(?:ever|again|trying\s+to)\s+)?"
+    r"(?:search|retrieve|look\s+up|check|access|query)\b",
+    re.IGNORECASE,
+)
+_QUOTED_SPAN = re.compile(
+    r'"[^"\n]*"|\'[^\'\n]*\'|“[^”\n]*”|‘[^’\n]*’|`[^`\n]*`'
+)
+_EXPLICIT_HISTORY_CONTEXT = re.compile(
+    r"\b(?:what|why|where|when|how|who)\b|"
+    r"\b(?:history|provenance|origins?|source|first|previously|"
+    r"discussed|talked|remember|trace|retrieve|find)\b",
+    re.IGNORECASE,
+)
 
 
 def _tokens(value: str) -> tuple[str, ...]:
@@ -130,9 +147,24 @@ def resolve_provenance_trigger(
         return TriggerDecision(TriggerStatus.UNRESOLVED, limitations=("input_not_bounded",))
     if len(rules) > MAX_RULES or len({r.concept_id for r in rules}) != len(rules):
         return TriggerDecision(TriggerStatus.UNRESOLVED, limitations=("rules_not_bounded_or_unique",))
-    words = _tokens(text)
-    if len(words) > MAX_TEXT_TOKENS:
+    # The literal host opt-in is necessary but cannot override an explicit
+    # user denial in this utterance. This is a conservative, bounded negative
+    # check; the host still owns the richer speech-act/privacy decision.
+    if _LOOKUP_NEGATION.search(text):
+        return TriggerDecision(
+            TriggerStatus.SUPPRESSED, limitations=("explicit_lookup_prohibition",)
+        )
+    raw_words = _tokens(text)
+    if len(raw_words) > MAX_TEXT_TOKENS:
         return TriggerDecision(TriggerStatus.UNRESOLVED, limitations=("token_limit_exceeded",))
+    # Quoted examples should not trigger solely by containing a matching name.
+    # Preserve quoted subjects when surrounding *unquoted* text explicitly
+    # asks a historical/provenance question.
+    unquoted_text = _QUOTED_SPAN.sub(" ", text)
+    candidate_text = (
+        text if _EXPLICIT_HISTORY_CONTEXT.search(unquoted_text) else unquoted_text
+    )
+    words = _tokens(candidate_text)
     hits = tuple(
         TriggerHit(rule.concept_id, rule.query, rule.scope_key, method)
         for rule in rules
