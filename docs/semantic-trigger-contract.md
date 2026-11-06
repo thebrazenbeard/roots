@@ -36,7 +36,9 @@ council = TriggerRule(
     ),
 )
 decision = resolve_provenance_trigger(
-    "What became of that internal committee we talked about?", (council,)
+    "What became of that internal committee we talked about?",
+    (council,),
+    allow_lookup=True,  # host-reviewed opt-in; NEVER a corpus permission
 )
 if decision.status is TriggerStatus.LOOKUP_REQUESTED:
     # Host MUST separately authenticate the actor and resolve authorized
@@ -81,7 +83,14 @@ runtime invokes it and implements the source-admission checks above.
 
 - Two concepts match: `AMBIGUOUS`; return all bounded IDs, never choose one.
 - Duplicate IDs or too-large input/rule sets: `UNRESOLVED`, without reading.
-- Explicit opt-out: `SUPPRESSED`, even when the phrase matches.
+- Explicit opt-out: `SUPPRESSED`, even when the phrase matches. The
+  bounded source check also detects common direct denial forms (such as
+  "Do not search our history") even if a host mistakenly opts in. It is not
+  a complete natural-language negation detector.
+- A quoted name inside an example is ignored unless the surrounding unquoted
+  text explicitly indicates history/provenance intent. Quoting alone is not
+  authority or lookup intent; complex quoted speech remains ambiguous and
+  requires host-level adjudication.
 - No reviewed pattern: `NO_TRIGGER` means no configured trigger, **not**
   that relevant history does not exist.
 - One match: `LOOKUP_REQUESTED` means metadata-only route request, not
