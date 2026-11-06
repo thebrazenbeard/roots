@@ -94,7 +94,7 @@ class SemanticTriggerTests(unittest.TestCase):
         self.assertEqual(result.status, TriggerStatus.UNRESOLVED)
         self.assertEqual(result.hits, ())
 
-    def test_quoted_control_text_is_only_a_lookup_hint(self) -> None:
+    def test_quoted_control_text_without_request_does_not_trigger(self) -> None:
         rule = TriggerRule(
             concept_id="restore-provenance",
             query="restore yourself control grammar history",
@@ -102,9 +102,40 @@ class SemanticTriggerTests(unittest.TestCase):
             phrase_forms=("restore yourself",),
         )
         result = resolve_provenance_trigger('The old transcript says "restore yourself".', (rule,), allow_lookup=True)
-        self.assertEqual(result.status, TriggerStatus.LOOKUP_REQUESTED)
-        self.assertEqual(result.hits[0].match_method, "CONFIGURED_PHRASE")
+        self.assertEqual(result.status, TriggerStatus.NO_TRIGGER)
+        self.assertEqual(result.hits, ())
         self.assertFalse(hasattr(result, "execute") or hasattr(result, "restore"))
+
+    def test_explicit_provenance_denial_dominates_matching(self) -> None:
+        for text in (
+            "Do not search our history for Inner Council.",
+            "Do not ever search our history for Inner Council.",
+            "Never look up Inner Council in the conversation archive.",
+            "Please don't retrieve the Inner Council history.",
+        ):
+            with self.subTest(text=text):
+                result = resolve_provenance_trigger(text, (self.council,), allow_lookup=True)
+                self.assertEqual(result.status, TriggerStatus.SUPPRESSED)
+                self.assertEqual(result.hits, ())
+
+    def test_quoted_mention_is_not_lookup_intent(self) -> None:
+        for text in (
+            "'Inner Council'",
+            'The UI displayed "Inner Council".',
+            'I typed "What was the origin of Inner Council?" into a field.',
+            'The old transcript says "restore yourself".',
+        ):
+            with self.subTest(text=text):
+                rule = TriggerRule("restore", "restore provenance", "controls", phrase_forms=("restore yourself",))
+                result = resolve_provenance_trigger(text, (self.council, rule), allow_lookup=True)
+                self.assertEqual(result.status, TriggerStatus.NO_TRIGGER)
+                self.assertEqual(result.hits, ())
+
+    def test_explicit_historical_question_can_name_quoted_subject(self) -> None:
+        result = resolve_provenance_trigger(
+            'Where did the name "Inner Council" come from?', (self.council,), allow_lookup=True
+        )
+        self.assertEqual(result.status, TriggerStatus.LOOKUP_REQUESTED)
 
     def test_malformed_rule_rejected_before_use(self) -> None:
         with self.assertRaises(ValueError):
