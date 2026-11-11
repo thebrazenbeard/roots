@@ -1,2 +1,7 @@
+# The PR #14 security baseline had no .gitignore; this policy is new.
+# Keep local secrets and Python output out of source without hiding editor tasks.
+__pycache__/
+.pytest_cache/
+.venv/
 config.bat
 node_modules
