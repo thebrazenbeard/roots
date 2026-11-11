@@ -7,5 +7,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Reject editor startup and counterfeit font source
+        run: python3 security/check_editor_source_safety.py
       - name: Reject hidden workspace startup execution
         run: python3 -m unittest discover -s tests -p test_workspace_startup_safety.py -v
+      - name: Run hostile editor source fixtures
+        run: python3 -m unittest discover -s tests -p test_editor_source_safety.py -v
