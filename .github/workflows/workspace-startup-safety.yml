@@ -6,6 +6,6 @@ jobs:
   editor-autostart:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Reject hidden workspace startup execution
         run: python3 -m unittest discover -s tests -p test_workspace_startup_safety.py -v
